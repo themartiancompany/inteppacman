@@ -47,7 +47,7 @@ _android_bad() {
   _cmd=(
     "${_mount}"
     "${_mount_opts[@]}"
-    "/system"
+    "/"
   )
   su \
     -c \
