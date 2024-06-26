@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+#
+# SPDX-License-Identifier: AGPL-3.0
+
+_bin="$( \
+  dirname \
+    "$( \
+      command \
+        -v \
+	  "env")")"
+_lib="${_bin}/../lib"
+_share="${_bin}/../share"
+source \
+  "${_lib}/libcrash-bash/crash-bash"
+
+_requirements() {
+  _check_cmd \
+    "su"
+  _check_cmd \
+    "pacman"
+}
+
+# shellcheck disable=SC2034
+_global_variables() {
+  pacman_args=()
+  color=""
+  quiet=""
+}
+
+_android_bad() {
+  local \
+    _robot="${1}" \
+    _mount \
+    _mount_opts=() \
+    _flag \
+    _cmd=()
+  if [[ "${_robot}" == "false" ]]; then
+    _flag='rw'
+  elif [[ "${_robot}" == "true" ]]; then
+    _flag='ro'
+  fi
+  _mount="/system/bin/mount"
+  _mount_opts+=(
+    -o
+      "remount,${_flag}"
+  )
+  _cmd=(
+    "${_mount}"
+    "${_mount_opts[@]}"
+    "/system"
+  )
+  su \
+    -c \
+    "${_cmd[*]}"
+}
+
+_android_corrupt() {
+  _android_bad \
+    'false'
+}
+
+_android_naughty() {
+  _android_bad \
+    'true'
+}
+
+_inteppacman() {
+  local \
+    _pacman_args=() \
+    _os
+  _pacman_args=(
+    "$@"
+  )
+  _os="$( \
+    uname \
+      -o)"
+  if [[ "${_os}" == "Android" ]]; then
+    _android_corrupt
+  fi
+  sudo \
+    pacman \
+      "${_pacman_args[@]}" || \
+    true
+  if [[ "${_os}" == "Android" ]]; then
+    _android_corrupt
+  fi
+}
+
+_set_overrides() {
+  if [[ -v override_color ]]; then
+    color="${override_color}"
+  elif [[ -z "${color}" ]]; then
+    color="n"
+  fi
+  if [[ -v override_quiet ]]; then
+    quiet="${override_quiet}"
+  elif [[ -z "${quiet}" ]]; then
+    quiet="y"
+  fi
+}
+
+# Show help usage, with an exit status.
+# $1: exit status number.
+_usage() {
+  local \
+    _usage_text
+  IFS='' \
+    read \
+      -r \
+      -d '' \
+      _usage_text << \
+        ENDUSAGETEXT || true
+
+integer prude pacman
+
+Usage:
+  $(_get "app" "name")
+    [options]
+    --
+    [pacman args]
+  options:
+     -h                   This message.
+     -v                   Enable verbose output
+ENDUSAGETEXT
+  _printf \
+    '%s\n' \
+    "${_usage_text}"
+  exit \
+    "${1}"
+}
+
+_globals
+_global_variables
+_requirements
+# shellcheck disable=SC2004
+# shellcheck disable=SC2034
+while \
+  getopts \
+    'cvh?' \
+    arg; do
+  case \
+    "${arg}" in
+    c) override_color="y" ;;
+    v) override_quiet="n" ;;
+    h|?) _set_overrides && \
+	 _usage \
+           0 ;;
+    *)
+    _msg_error \
+      "Invalid argument '${arg}'" \
+      0 && \
+    _set_overrides && \
+    _usage \
+      1
+    ;;
+  esac
+done
+shift \
+  $(( \
+    OPTIND - 1 \
+  ))
+pacman_args=(
+  "$@"
+)
+_set_overrides
+_config_user_init \
+  "$(_get "app" "name")"
+_inteppacman \
+  "${pacman_args[@]}"
+
+# vim:set sw=2 sts=-1 et:
