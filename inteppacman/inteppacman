@@ -133,6 +133,8 @@ _inteppacman() {
         "/${_apk}"
     done
   fi
+  pacman \
+    "${_pacman_args[@]}"
   if [[ "${_os}" == "Android" ]]; then
     _android_corrupt
     cd \
