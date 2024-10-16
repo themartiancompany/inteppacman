@@ -49,9 +49,10 @@ _android_bad() {
     "${_mount_opts[@]}"
     "/"
   )
-  su \
-    -c \
-    "${_cmd[*]}"
+  sudo \
+    "${_cmd[@]}"
+  return \
+    0
 }
 
 _android_corrupt() {
@@ -66,8 +67,14 @@ _android_naughty() {
 
 _inteppacman() {
   local \
+    _arg \
     _pacman_args=() \
-    _os
+    _os \
+    _pkg \
+    _apk \
+    _android_app=() \
+    _tmp_dir \
+    _oldpwd
   _pacman_args=(
     "$@"
   )
@@ -75,14 +82,50 @@ _inteppacman() {
     uname \
       -o)"
   if [[ "${_os}" == "Android" ]]; then
-    _android_corrupt
+    _oldpwd="$( \
+      pwd)"
+    _tmp_dir="$( \
+      mktemp \
+        -d)"
+    _android_corrupt || \
+      true
+    cd \
+      "${_tmp_dir}"
+    for _arg \
+      in "${_pacman_args[@]}"; do
+      if [[ "${_arg}" == *".pkg.tar.xz" ]]; then
+        _pkg="$( \
+          realpath \
+            "${_arg}")"
+        break
+      fi
+    done
+    _msg_info \
+      "installing ${_pkg}..."
+    _android_app+=( $( \
+      echo \
+        "$(tar \
+             -tf \
+             "${_pkg}")" | \
+             grep \
+               "system/" | \
+               grep \
+                 "/base.apk")
+    )
+    for _apk \
+      in "${_android_app[@]}"; do
+      install \
+        -vDm644 \
+        "./${_apk}" \
+        "/${_apk}"
+    done
   fi
-  sudo \
-    pacman \
-      "${_pacman_args[@]}" || \
-    true
   if [[ "${_os}" == "Android" ]]; then
     _android_corrupt
+    cd \
+      "${_oldpwd}"
+    rm \
+      -rf "${_tmp_dir}"
   fi
 }
 
