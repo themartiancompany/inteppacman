@@ -22,6 +22,7 @@ _requirements() {
 
 # shellcheck disable=SC2034
 _global_variables() {
+  operation_date=()
   pacman_args=()
   color=""
   quiet=""
@@ -67,8 +68,9 @@ _android_naughty() {
 
 _inteppacman() {
   local \
-    _arg \
     _pacman_args=() \
+    _install \
+    _arg \
     _os \
     _pkg \
     _apk \
@@ -82,6 +84,7 @@ _inteppacman() {
     uname \
       -o)"
   if [[ "${_os}" == "Android" ]]; then
+    _install="/system/bin/install"
     _oldpwd="$( \
       pwd)"
     _tmp_dir="$( \
@@ -89,8 +92,6 @@ _inteppacman() {
         -d)"
     _android_corrupt || \
       true
-    cd \
-      "${_tmp_dir}"
     for _arg \
       in "${_pacman_args[@]}"; do
       if [[ "${_arg}" == *".pkg.tar.xz" ]]; then
@@ -100,6 +101,8 @@ _inteppacman() {
         break
       fi
     done
+    cd \
+      "${_tmp_dir}"
     _msg_info \
       "installing ${_pkg}..."
     _android_app+=( $( \
@@ -112,9 +115,19 @@ _inteppacman() {
                grep \
                  "/base.apk")
     )
+    _msg_info \
+      "found ${_android_app[*]}"
+    if [[ "${_android_app[*]}" != "" ]]; then
+      tar \
+        -xf \
+        "${_pkg}"
+    fi
     for _apk \
       in "${_android_app[@]}"; do
-      install \
+      _msg_info \
+        "'${_apk}' -> '/${_apk}'..."
+      sudo \
+        "${_install}" \
         -vDm644 \
         "./${_apk}" \
         "/${_apk}"
@@ -130,6 +143,10 @@ _inteppacman() {
 }
 
 _set_overrides() {
+  _set \
+    "operation" \
+    "date" \
+    "$(_get_date_human)"
   if [[ -v override_color ]]; then
     color="${override_color}"
   elif [[ -z "${color}" ]]; then
@@ -141,6 +158,14 @@ _set_overrides() {
     quiet="y"
   fi
 }
+
+# Shows configuration options.
+_show_config() {
+  _msg_info "${app_name} configuration"
+  _msg_info "           Operation date:   $(_get "operation" "date")"
+  _msg_info "              Pacman args:   ${pacman_args[*]}"
+}
+
 
 # Show help usage, with an exit status.
 # $1: exit status number.
@@ -208,6 +233,7 @@ pacman_args=(
 _set_overrides
 _config_user_init \
   "$(_get "app" "name")"
+_show_config
 _inteppacman \
   "${pacman_args[@]}"
 
