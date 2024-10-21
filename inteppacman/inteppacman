@@ -69,6 +69,7 @@ _android_naughty() {
 _inteppacman() {
   local \
     _pacman_args=() \
+    _pacman_cmd=() \
     _install \
     _arg \
     _os \
@@ -132,11 +133,20 @@ _inteppacman() {
         "./${_apk}" \
         "/${_apk}"
     done
+  elif [[ "${_os}" == "GNU/Linux" ]]; then
+    _pacman_cmd+=(
+      'sudo'
+    )
   fi
-  pacman \
-    "${_pacman_args[@]}"
+  _pacman_cmd+=(
+    'pacman'
+  )
+  "${_pacman_cmd[@]}" \
+    "${_pacman_args[@]}" || \
+    true
   if [[ "${_os}" == "Android" ]]; then
-    _android_corrupt
+    _android_naughty || \
+      true
     cd \
       "${_oldpwd}"
     rm \
