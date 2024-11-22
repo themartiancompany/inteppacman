@@ -141,7 +141,7 @@ _inteppacman() {
       true
     for _arg \
       in "${_pacman_args[@]}"; do
-      if [[ "${_arg}" == *".pkg.tar.xz" ]]; then
+      if [[ "${_arg}" == *".pkg.tar."* ]]; then
         _pkg="$( \
           realpath \
             "${_arg}")"
