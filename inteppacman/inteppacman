@@ -66,8 +66,54 @@ _android_naughty() {
     'true'
 }
 
+_sudo_check() {
+  local \
+    _check \
+    _msg_sry \
+    _msg_may \
+    _out
+  _msg_sry="Sorry, user "
+  _msg_may="may not run sudo on"
+  _check="$( \
+    sudo \
+      -v 2>&1)"
+  _out="true"
+  if [[ "${_check}" == "${_msg_sry}"* ]] &&
+     [[ "${_check}" == *"${_msg_may}"*"." ]]; then
+    _out="false"
+  fi
+  echo \
+    "${_out}"
+}
+
+_pacman_run() {
+  local \
+    _msg=()
+  _msg=(
+    "running"
+    "${_pacman_prefix[@]}"
+    "${_pacman_cmd[@]}"
+    "${_pacman_args[@]}"
+  )
+  _msg_info \
+    "${_msg[*]}"
+  if [[ "${_pacman_prefix[*]}" == "su -c"* ]]; then
+    su \
+      -c \
+      "${_pacman_cmd[*]} \
+        ${_pacman_args[*]}" || \
+      true
+  else
+    "${_pacman_prefix[@]}" \
+      "${_pacman_cmd[@]}" \
+        "${_pacman_args[@]}" || \
+      true
+  fi
+}
+
 _inteppacman() {
   local \
+    _pacman_prefix=() \
     _pacman_args=() \
     _pacman_cmd=() \
     _install \
@@ -134,16 +180,21 @@ _inteppacman() {
         "/${_apk}"
     done
   elif [[ "${_os}" == "GNU/Linux" ]]; then
-    _pacman_cmd+=(
-      'sudo'
-    )
+    if [[ "$(_sudo_check)" == "true" ]]; then
+      _pacman_prefix+=(
+        'sudo'
+      )
+    elif [[ "$(_sudo_check)" == "false" ]]; then
+      _pacman_prefix+=(
+        'su'
+          '-c'
+      )
+    fi
   fi
   _pacman_cmd+=(
     'pacman'
   )
-  "${_pacman_cmd[@]}" \
-    "${_pacman_args[@]}" || \
-    true
+  _pacman_run
   if [[ "${_os}" == "Android" ]]; then
     _android_naughty || \
       true
