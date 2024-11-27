@@ -23,6 +23,7 @@ _requirements() {
 # shellcheck disable=SC2034
 _global_variables() {
   operation_date=()
+  user_install=""
   pacman_args=()
   color=""
   quiet=""
@@ -111,8 +112,35 @@ _pacman_run() {
   fi
 }
 
+_android_system_install() {
+  _android_corrupt || \
+    true
+  sudo \
+    "${_install}" \
+    -vDm644 \
+    "./${_apk}" \
+    "/${_apk}"
+  _android_naughty || \
+    true
+}
+
+_android_user_install() {
+  sudo \
+    mv \
+    "./${_apk}" \
+    "/data/local/tmp/base.apk"
+  sudo \
+    cmd \
+      package \
+        install \
+        --user \
+          0 \
+        "/data/local/tmp/base.apk"
+}
+
 _inteppacman() {
   local \
+    _user_install="${1}" \
     _pacman_prefix=() \
     _pacman_args=() \
     _pacman_cmd=() \
@@ -124,6 +152,8 @@ _inteppacman() {
     _android_app=() \
     _tmp_dir \
     _oldpwd
+  shift \
+    1
   _pacman_args=(
     "$@"
   )
@@ -137,8 +167,6 @@ _inteppacman() {
     _tmp_dir="$( \
       mktemp \
         -d)"
-    _android_corrupt || \
-      true
     for _arg \
       in "${_pacman_args[@]}"; do
       if [[ "${_arg}" == *".pkg.tar."* ]]; then
@@ -173,11 +201,15 @@ _inteppacman() {
       in "${_android_app[@]}"; do
       _msg_info \
         "'${_apk}' -> '/${_apk}'..."
-      sudo \
-        "${_install}" \
-        -vDm644 \
-        "./${_apk}" \
-        "/${_apk}"
+      if [[ "${_user_install}" == "n" ]]; then
+        _android_system_install
+      elif [[ "${_user_install}" == "y" ]]; then
+        _android_user_install
+      fi
+      cd \
+        "${_oldpwd}"
+      rm \
+        -rf "${_tmp_dir}"
     done
   elif [[ "${_os}" == "GNU/Linux" ]]; then
     if [[ "$(_sudo_check)" == "true" ]]; then
@@ -196,12 +228,6 @@ _inteppacman() {
   )
   _pacman_run
   if [[ "${_os}" == "Android" ]]; then
-    _android_naughty || \
-      true
-    cd \
-      "${_oldpwd}"
-    rm \
-      -rf "${_tmp_dir}"
   fi
 }
 
@@ -210,6 +236,10 @@ _set_overrides() {
     "operation" \
     "date" \
     "$(_get_date_human)"
+  _set \
+    "user" \
+    "install" \
+    "n"
   if [[ -v override_color ]]; then
     color="${override_color}"
   elif [[ -z "${color}" ]]; then
@@ -226,6 +256,7 @@ _set_overrides() {
 _show_config() {
   _msg_info "${app_name} configuration"
   _msg_info "           Operation date:   $(_get "operation" "date")"
+  _msg_info "       User-level install:   $(_get "user" "install")"
   _msg_info "              Pacman args:   ${pacman_args[*]}"
 }
 
@@ -250,6 +281,8 @@ Usage:
     --
     [pacman args]
   options:
+     -u                   User-level installation.
+
      -h                   This message.
      -v                   Enable verbose output
 ENDUSAGETEXT
@@ -267,10 +300,11 @@ _requirements
 # shellcheck disable=SC2034
 while \
   getopts \
-    'cvh?' \
+    'ucvh?' \
     arg; do
   case \
     "${arg}" in
+    u) override_user_install="y" ;;
     c) override_color="y" ;;
     v) override_quiet="n" ;;
     h|?) _set_overrides && \
@@ -293,11 +327,17 @@ shift \
 pacman_args=(
   "$@"
 )
+app_opts=(
+  "$(_get \
+       "user" \
+       "install")"
+  "${pacman_args[@]}"
+)
 _set_overrides
 _config_user_init \
   "$(_get "app" "name")"
 _show_config
 _inteppacman \
-  "${pacman_args[@]}"
+  "${app_opts[@]}"
 
 # vim:set sw=2 sts=-1 et:
