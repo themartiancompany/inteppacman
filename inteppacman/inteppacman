@@ -113,8 +113,12 @@ _pacman_run() {
 }
 
 _android_system_install() {
+  local \
+    install
+  _install="/system/bin/install"
   _android_corrupt || \
     true
+  # TODO: install libraries
   sudo \
     "${_install}" \
     -vDm644 \
@@ -138,17 +142,48 @@ _android_user_install() {
         "/data/local/tmp/base.apk"
 }
 
+_android_app_install() {
+  local \
+    _apk
+  for _apk \
+    in "${_android_app[@]}"; do
+    _msg_info \
+      "'${_apk}' -> '/${_apk}'..."
+    if [[ "${_user_install}" == "n" ]]; then
+      _android_system_install
+    elif [[ "${_user_install}" == "y" ]]; then
+      _android_user_install
+    fi
+    cd \
+      "${_oldpwd}"
+    rm \
+      -rf "${_tmp_dir}"
+  done
+}
+
+_android_app_check() {
+  _android_app+=( $( \
+    echo \
+      "$(tar \
+           -tf \
+           "${_pkg}")" | \
+           grep \
+             "system/" | \
+             grep \
+               "/base.apk")
+  )
+}
+
 _inteppacman() {
   local \
     _user_install="${1}" \
     _pacman_prefix=() \
     _pacman_args=() \
     _pacman_cmd=() \
-    _install \
     _arg \
     _os \
     _pkg \
-    _apk \
+    _action \
     _android_app=() \
     _tmp_dir \
     _oldpwd
@@ -161,7 +196,6 @@ _inteppacman() {
     uname \
       -o)"
   if [[ "${_os}" == "Android" ]]; then
-    _install="/system/bin/install"
     _oldpwd="$( \
       pwd)"
     _tmp_dir="$( \
@@ -169,6 +203,11 @@ _inteppacman() {
         -d)"
     for _arg \
       in "${_pacman_args[@]}"; do
+      if [[ "${_arg}" == "-S*" ]]; then
+        _action="install"
+      elif [[ "${_arg}" == "-R*" ]]; then
+        _action="uninstall"
+      fi
       if [[ "${_arg}" == *".pkg.tar."* ]]; then
         _pkg="$( \
           realpath \
@@ -180,37 +219,15 @@ _inteppacman() {
       "${_tmp_dir}"
     _msg_info \
       "installing ${_pkg}..."
-    _android_app+=( $( \
-      echo \
-        "$(tar \
-             -tf \
-             "${_pkg}")" | \
-             grep \
-               "system/" | \
-               grep \
-                 "/base.apk")
-    )
-    _msg_info \
-      "found ${_android_app[*]}"
+    _android_app_check
     if [[ "${_android_app[*]}" != "" ]]; then
+      _msg_info \
+        "found ${_android_app[*]}"
       tar \
         -xf \
         "${_pkg}"
     fi
-    for _apk \
-      in "${_android_app[@]}"; do
-      _msg_info \
-        "'${_apk}' -> '/${_apk}'..."
-      if [[ "${_user_install}" == "n" ]]; then
-        _android_system_install
-      elif [[ "${_user_install}" == "y" ]]; then
-        _android_user_install
-      fi
-      cd \
-        "${_oldpwd}"
-      rm \
-        -rf "${_tmp_dir}"
-    done
+    "_android_app_${_action}"
   elif [[ "${_os}" == "GNU/Linux" ]]; then
     if [[ "$(_sudo_check)" == "true" ]]; then
       _pacman_prefix+=(
@@ -227,8 +244,6 @@ _inteppacman() {
     'pacman'
   )
   _pacman_run
-  if [[ "${_os}" == "Android" ]]; then
-  fi
 }
 
 _set_overrides() {
