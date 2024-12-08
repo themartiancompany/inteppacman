@@ -58,11 +58,27 @@ _android_bad() {
 }
 
 _android_corrupt() {
+  local \
+    _msg=()
+  _msg=(
+    "remounting Android root"
+    "as read-write"
+  )
+  _msg_info \
+   "${_msg[*]}" 
   _android_bad \
     'false'
 }
 
 _android_naughty() {
+  local \
+    _msg=()
+  _msg=(
+    "remounting Android root"
+    "as read-only"
+  )
+  _msg_info \
+   "${_msg[*]}" 
   _android_bad \
     'true'
 }
@@ -114,10 +130,20 @@ _pacman_run() {
 
 _android_system_install() {
   local \
+    _apk="${1}" \
+    _msg=() \
     install
   _install="/system/bin/install"
+  _msg=(
+    "installing apk file"
+    "'${_apk}' at system level"
+  )
+  _msg_info \
+    "${_msg[*]}"
   _android_corrupt || \
     true
+  _msg_info \
+    "'${_apk}' -> '/${_apk}'..."
   # TODO: install libraries
   sudo \
     "${_install}" \
@@ -129,48 +155,131 @@ _android_system_install() {
 }
 
 _android_user_install() {
+  local \
+    _apk="${1}" \
+    _msg=() \
+    _cmd
+  _cmd=(
+    sudo
+      cmd
+        package
+          install
+            --user
+              0
+            "/data/local/tmp/base.apk"
+  )
+  _msg=(
+    "installing apk file"
+    "'${_apk}' at user level"
+    "(it requires administrative"
+    "privileges regardless)"
+  )
+  _msg_info \
+    "${_msg[*]}"
+  _msg=(
+    "moving apk file"
+    "'${_apk}' to"
+    "/data/local/tmp/base.apk"
+  )
+  _msg_info \
+    "${_msg[*]}"
   sudo \
     mv \
     "./${_apk}" \
     "/data/local/tmp/base.apk"
-  sudo \
-    cmd \
-      package \
-        install \
-        --user \
-          0 \
-        "/data/local/tmp/base.apk"
+  _msg=(
+    "running"
+    "'${_cmd[*]}'"
+  )
+  _msg_info \
+    "${_msg[*]}"
+  "${_cmd[@]}"
 }
 
 _android_app_install() {
   local \
-    _apk
+    _apps=() \
+    _apk \
+    _msg=()
+  _apps=(
+    "$@"
+  )
+  _msg=(
+    "installing Android packages"
+    "${_apps[*]}"
+  )
+  _msg_info \
+    "${_msg[*]}"
+  _oldpwd="$( \
+    pwd)"
+  cd \
+    "${_tmp_dir}"
   for _apk \
-    in "${_android_app[@]}"; do
-    _msg_info \
-      "'${_apk}' -> '/${_apk}'..."
+    in "${_android_apps[@]}"; do
     if [[ "${_user_install}" == "n" ]]; then
-      _android_system_install
+      _android_system_install \
+        "${_apk}"
     elif [[ "${_user_install}" == "y" ]]; then
-      _android_user_install
+      _android_user_install \
+        "${_apk}"
     fi
-    cd \
-      "${_oldpwd}"
-    rm \
-      -rf "${_tmp_dir}"
   done
+  cd \
+    "${_oldpwd}"
+  _msg=(
+    "cleaning temporary directory"
+    "'${_tmp_dir}'"
+  )
+  _msg_info \
+    "${_msg[*]}"
+  rm \
+    -rf "${_tmp_dir}"
 }
 
 _android_app_check() {
-  _android_app+=( $( \
+  local \
+    _pkg="${1}"
+  _apks+=( $( \
     echo \
       "$(tar \
-           -tf \
-           "${_pkg}")" | \
-           grep \
-             "system/" | \
-             grep \
-               "/base.apk")
+         -tf \
+         "${_pkg}")" | \
+         { grep \
+             "system/" || \
+           true; } | \
+           { grep \
+               "/base.apk" || \
+             true; })
+  )
+}
+
+_android_app_filter() {
+  local \
+    _pkg="${1}" \
+    _msg=() \
+    _apks=() \
+    _oldpwd
+  _android_app_check \
+      "${_pkg}"
+  if [[ "${_apks[*]}" != "" ]]; then
+    _msg=(
+      "package '${_pkg}' is for an"
+      "Android application, extracting"
+      "in '${_tmp_dir}'")
+    _msg_info \
+      "${_msg[*]}"
+    _oldpwd="$( \
+      pwd)"
+    cd \
+      "${_tmp_dir}"
+    tar \
+      -xf \
+      "${_pkg}"
+    cd \
+      "${_oldpwd}"
+  fi
+  _android_apps+=(
+    "${_apks[@]}"
   )
 }
 
@@ -182,11 +291,9 @@ _inteppacman() {
     _pacman_cmd=() \
     _arg \
     _os \
-    _pkg \
-    _action \
-    _android_app=() \
-    _tmp_dir \
-    _oldpwd
+    _android_action \
+    _android_apps=() \
+    _tmp_dir
   shift \
     1
   _pacman_args=(
@@ -196,38 +303,27 @@ _inteppacman() {
     uname \
       -o)"
   if [[ "${_os}" == "Android" ]]; then
-    _oldpwd="$( \
-      pwd)"
     _tmp_dir="$( \
       mktemp \
         -d)"
     for _arg \
       in "${_pacman_args[@]}"; do
-      if [[ "${_arg}" == "-S*" ]]; then
-        _action="install"
-      elif [[ "${_arg}" == "-R*" ]]; then
-        _action="uninstall"
+      if [[ "${_arg}" == "-S"* ]] || \
+         [[ "${_arg}" == "-U"* ]]; then
+        _android_action="install"
+      elif [[ "${_arg}" == "-R"* ]]; then
+        _android_action="uninstall"
       fi
       if [[ "${_arg}" == *".pkg.tar."* ]]; then
-        _pkg="$( \
-          realpath \
-            "${_arg}")"
-        break
+        _android_app_filter \
+          "$(realpath \
+               "${_arg}")"
       fi
     done
-    cd \
-      "${_tmp_dir}"
-    _msg_info \
-      "installing ${_pkg}..."
-    _android_app_check
-    if [[ "${_android_app[*]}" != "" ]]; then
-      _msg_info \
-        "found ${_android_app[*]}"
-      tar \
-        -xf \
-        "${_pkg}"
+    if [[ "${_android_apps[*]}" != "" ]]; then
+      "_android_app_${_android_action}" \
+        "${_android_apps[@]}"
     fi
-    "_android_app_${_action}"
   elif [[ "${_os}" == "GNU/Linux" ]]; then
     if [[ "$(_sudo_check)" == "true" ]]; then
       _pacman_prefix+=(
