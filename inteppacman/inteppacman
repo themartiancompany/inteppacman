@@ -25,6 +25,7 @@ _global_variables() {
   operation_date=()
   user_install=""
   pacman_args=()
+  android_app=""
   color=""
   quiet=""
 }
@@ -253,6 +254,69 @@ _android_app_check() {
   )
 }
 
+_android_data_install() {
+  local \
+    _pkg="${1}" \
+    _install \
+    _file \
+    _files=() \
+    _oldpwd \
+    _msg=()
+  _install="/system/bin/install"
+  _oldpwd="$( \
+    pwd)"
+  _msg=(
+    "copying the contents of"
+    "'${_pkg}' over the file"
+    "system."
+  )
+  _msg_info \
+    "${_msg[*]}"
+  rm \
+    -rf \
+    "${_tmp_dir}/"* || \
+  true
+  _files+=( $( \
+    tar \
+      -tf \
+      "${_pkg}")
+  )
+  echo \
+    "${_files[@]}"
+  cd \
+    "${_tmp_dir}"
+  tar \
+   -xf \
+   "${_pkg}"
+  _android_corrupt || \
+    true
+  printf \
+    "%s\n" \
+    "${_files[@]}"
+  for _file in "${_files[@]}"; do
+    if [[ "${_file}" != ".PKGINFO" && \
+          "${_file}" != ".MTREE" && \
+          "${_file}" != ".BUILDINFO" ]]; then
+      if [[ ! -d "./${_file}" ]]; then
+        sudo \
+          "${_install}" \
+          -vDm644 \
+          "./${_file}" \
+          "/${_file}" || \
+          true
+      fi
+    fi
+  done
+  _android_naughty || \
+    true
+  rm \
+    -rf \
+    "${_tmp_dir}/"* || \
+  true
+  cd \
+    "${_oldpwd}"
+}
+
 _android_app_filter() {
   local \
     _pkg="${1}" \
@@ -285,7 +349,8 @@ _android_app_filter() {
 
 _inteppacman() {
   local \
-    _user_install="${1}" \
+    _android_app="${1}" \
+    _user_install="${2}" \
     _pacman_prefix=() \
     _pacman_args=() \
     _pacman_cmd=() \
@@ -295,7 +360,7 @@ _inteppacman() {
     _android_apps=() \
     _tmp_dir
   shift \
-    1
+    2
   _pacman_args=(
     "$@"
   )
@@ -315,6 +380,11 @@ _inteppacman() {
         _android_action="uninstall"
       fi
       if [[ "${_arg}" == *".pkg.tar."* ]]; then
+        if [[ "${_android_app}" == "y" ]]; then
+          _android_data_install \
+            "$(realpath \
+                 "${_arg}")"
+        fi
         _android_app_filter \
           "$(realpath \
                "${_arg}")"
@@ -343,14 +413,6 @@ _inteppacman() {
 }
 
 _set_overrides() {
-  _set \
-    "operation" \
-    "date" \
-    "$(_get_date_human)"
-  _set \
-    "user" \
-    "install" \
-    "n"
   if [[ -v override_color ]]; then
     color="${override_color}"
   elif [[ -z "${color}" ]]; then
@@ -361,13 +423,26 @@ _set_overrides() {
   elif [[ -z "${quiet}" ]]; then
     quiet="y"
   fi
+  _set_override \
+    "operation" \
+    "date" \
+    "$(_get_date_human)"
+  _set_override \
+    "android" \
+    "app" \
+    "n"
+  _set_override \
+    "user" \
+    "install" \
+    "n"
 }
 
 # Shows configuration options.
 _show_config() {
   _msg_info "${app_name} configuration"
   _msg_info "           Operation date:   $(_get "operation" "date")"
-  _msg_info "       User-level install:   $(_get "user" "install")"
+  _msg_info "      Android application:   ${android_app}"
+  _msg_info "       User-level install:   ${user_install}"
   _msg_info "              Pacman args:   ${pacman_args[*]}"
 }
 
@@ -391,8 +466,13 @@ Usage:
     [options]
     --
     [pacman args]
+
   options:
+     -A                   Explicitly specify it's an
+                          Android app.
+                          Default: ${android_app}
      -u                   User-level installation.
+                          Default: ${user_install}
 
      -h                   This message.
      -v                   Enable verbose output
@@ -411,10 +491,11 @@ _requirements
 # shellcheck disable=SC2034
 while \
   getopts \
-    'ucvh?' \
+    'Aucvh?' \
     arg; do
   case \
     "${arg}" in
+    A) override_android_app="y" ;;
     u) override_user_install="y" ;;
     c) override_color="y" ;;
     v) override_quiet="n" ;;
@@ -438,15 +519,14 @@ shift \
 pacman_args=(
   "$@"
 )
+_set_overrides
 app_opts=(
-  "$(_get \
-       "user" \
-       "install")"
+  "${android_app}"
+  "${user_install}"
   "${pacman_args[@]}"
 )
-_set_overrides
 _config_user_init \
-  "$(_get "app" "name")"
+  "${app_name}"
 _show_config
 _inteppacman \
   "${app_opts[@]}"
