@@ -302,7 +302,9 @@ _android_app_check() {
          "${_pkg}")" | \
          { grep \
              "system/" || \
-           true; } | \
+           grep \
+             "data/" || \
+             true; } | \
            { grep \
                "/base.apk" || \
              true; })
