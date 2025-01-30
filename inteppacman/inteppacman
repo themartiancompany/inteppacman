@@ -197,7 +197,7 @@ _android_user_install() {
   "${_cmd[@]}"
 }
 
-_android_app_install() {
+_android_app_install_file() {
   local \
     _apps=() \
     _apk \
@@ -382,7 +382,7 @@ _pkg_file_android_app_filter() {
     _msg=() \
     _apks=() \
     _oldpwd
-  _pkg_android_app_check \
+  _pkg_file_android_app_check \
       "${_pkg}"
   if [[ "${_apks[*]}" != "" ]]; then
     _msg=(
@@ -571,7 +571,7 @@ _inteppacman() {
         -d)"
     for _pkg in "${_packages_files[@]}"; do
       if [[ "${_action}" == "install_file" ]]; then
-        if [[ "${_ndroid_app}" == "y" ]]; then
+        if [[ "${_android_app}" == "y" ]]; then
           _android_data_install \
             "${_pkg}"
         fi
