@@ -159,16 +159,7 @@ _android_user_install() {
   local \
     _apk="${1}" \
     _msg=() \
-    _cmd
-  _cmd=(
-    sudo
-      cmd
-        package
-          install
-            --user
-              0
-            "/data/local/tmp/base.apk"
-  )
+    _cmd=()
   _msg=(
     "installing apk file"
     "'${_apk}' at user level"
@@ -177,6 +168,15 @@ _android_user_install() {
   )
   _msg_info \
     "${_msg[*]}"
+  _cmd+=(
+    sudo
+      cmd
+        package
+          install
+            --user
+              0
+            "/data/local/tmp/base.apk"
+  )
   _msg=(
     "moving apk file"
     "'${_apk}' to"
@@ -237,12 +237,18 @@ _android_app_install() {
     -rf "${_tmp_dir}"
 }
 
-_android_user_install() {
+_android_user_uninstall() {
   local \
     _app="${1}" \
     _msg=() \
-    _cmd
-  _cmd=(
+    _cmd=()
+  _msg=(
+    "Uninstalling user"
+    "application '${_app}'."
+  )
+  _msg_info \
+    "${_msg[*]}" 
+  _cmd+=(
     sudo
       pm
         uninstall
@@ -301,10 +307,8 @@ _android_app_check() {
          -tf \
          "${_pkg}")" | \
          { grep \
-             "system/" || \
-           grep \
-             "data/" || \
-             true; } | \
+             'system/\|data/' || \
+           true; } | \
            { grep \
                "/base.apk" || \
              true; })
@@ -323,9 +327,9 @@ _android_data_install() {
   _oldpwd="$( \
     pwd)"
   _msg=(
-    "copying the contents of"
-    "'${_pkg}' over the file"
-    "system."
+    "Package marked as Android application"
+    "with -A option, copying the contents of"
+    "'${_pkg}' over the file system."
   )
   _msg_info \
     "${_msg[*]}"
