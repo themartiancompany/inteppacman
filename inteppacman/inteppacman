@@ -286,7 +286,15 @@ _android_app_uninstall() {
 
 _android_app_check() {
   local \
-    _pkg="${1}"
+    _pkg="${1}" \
+    _msg=()
+  _msg=(
+    "checking package"
+    "'${_pkg}' for Android"
+    "applications."
+  )
+  _msg_info \
+    "${_msg[*]}"
   _apks+=( $( \
     echo \
       "$(tar \
@@ -328,8 +336,6 @@ _android_data_install() {
       -tf \
       "${_pkg}")
   )
-  echo \
-    "${_files[@]}"
   cd \
     "${_tmp_dir}"
   tar \
@@ -337,9 +343,6 @@ _android_data_install() {
    "${_pkg}"
   _android_corrupt || \
     true
-  printf \
-    "%s\n" \
-    "${_files[@]}"
   for _file in "${_files[@]}"; do
     if [[ "${_file}" != ".PKGINFO" && \
           "${_file}" != ".MTREE" && \
@@ -388,6 +391,13 @@ _android_app_filter() {
       "${_pkg}"
     cd \
       "${_oldpwd}"
+  else
+    _msg=(
+      "found no Android applications"
+      "in '${_pkg}'."
+    )
+    _msg_info \
+      "${_msg[*]}"
   fi
   _android_apps+=(
     "${_apks[@]}"
