@@ -197,7 +197,7 @@ _android_user_install() {
   "${_cmd[@]}"
 }
 
-_android_app_install() {
+_pkg_android_app_install() {
   local \
     _apps=() \
     _apk \
@@ -290,12 +290,12 @@ _android_app_uninstall() {
     "${_msg[*]}"
 }
 
-_android_app_check() {
+_pkg_android_app_check() {
   local \
     _pkg="${1}" \
     _msg=()
   _msg=(
-    "checking package"
+    "checking package archive"
     "'${_pkg}' for Android"
     "applications."
   )
@@ -352,7 +352,8 @@ _android_data_install() {
   for _file in "${_files[@]}"; do
     if [[ "${_file}" != ".PKGINFO" && \
           "${_file}" != ".MTREE" && \
-          "${_file}" != ".BUILDINFO" ]]; then
+          "${_file}" != ".BUILDINFO" && \
+          "${_file}" != ".INSTALL" ]]; then
       if [[ ! -d "./${_file}" ]]; then
         sudo \
           "${_install}" \
@@ -373,13 +374,13 @@ _android_data_install() {
     "${_oldpwd}"
 }
 
-_android_app_filter() {
+_pkg_android_app_filter() {
   local \
     _pkg="${1}" \
     _msg=() \
     _apks=() \
     _oldpwd
-  _android_app_check \
+  _pkg_android_app_check \
       "${_pkg}"
   if [[ "${_apks[*]}" != "" ]]; then
     _msg=(
@@ -410,6 +411,63 @@ _android_app_filter() {
   )
 }
 
+_android_app_name_check() {
+  local \
+    _pkg="${1}" \
+    _msg=()
+  _msg=(
+    "Checking package"
+    "'${_pkg}' is for an Android"
+    "application."
+  )
+  _msg_info \
+    "${_msg[*]}"
+  _apks+=( $( \
+    echo \
+      "$(pacman \
+         -Ql \
+         "${_pkg}")" | \
+         { grep \
+             '/system/app\|/data/app' || \
+           true; } | \
+           { grep \
+               "/base.apk" || \
+             true; })
+  )
+}
+
+_android_app_filter_name_get() {
+  local \
+    _pkg="${1}" \
+    _msg=() \
+    _apks=() \
+    _names=()
+  _android_app_name_check \
+      "${_pkg}"
+  if [[ "${_apks[*]}" != "" ]]; then
+    _msg=(
+      "package '${_pkg}' is for an"
+      "Android application, getting its name"
+    )
+    _msg_info \
+      "${_msg[*]}"
+    _name="$( \
+      basename \
+        "$(dirname \
+             "${_apks[-1]}")")"
+  else
+    _msg=(
+      "found no Android applications"
+      "in '${_pkg}'."
+    )
+    _msg_info \
+      "${_msg[*]}"
+  fi
+  _android_apps+=(
+    "${_names[@]}"
+  )
+}
+
 _inteppacman() {
   local \
     _android_app="${1}" \
@@ -421,6 +479,8 @@ _inteppacman() {
     _os \
     _android_action \
     _android_apps=() \
+    _pkg \
+    _packages=() \
     _tmp_dir
   shift \
     2
@@ -442,19 +502,37 @@ _inteppacman() {
       elif [[ "${_arg}" == "-R"* ]]; then
         _android_action="uninstall"
       fi
-      if [[ "${_arg}" == *".pkg.tar."* ]]; then
-        if [[ "${_android_app}" == "y" ]]; then
-          _android_data_install \
-            "$(realpath \
-                 "${_arg}")"
+      if [[ "${_arg}" != "-"* ]]; then
+        if [[ "${_arg}" == *".pkg.tar."* ]]; then
+          _pkg="$( \
+            realpath \
+              "${_arg}")"
+        else
+          _pkg="${_arg}"
         fi
-        _android_app_filter \
-          "$(realpath \
-               "${_arg}")"
+        _packages+=(
+          "${_pkg}"
+        )
       fi
     done
-    if [[ "${_android_apps[*]}" != "" ]]; then
-      "_android_app_${_android_action}" \
+    for _pkg in "${_packages[@]}"; do
+      if [[ "${_pkg}" == *".pkg.tar."* ]]; then
+        if [[ "${_android_action}" == "install" && \
+              "${_android_app}" == "y" ]]; then
+          _android_data_install \
+            "${_arg}"
+        fi
+        _pkg_android_app_filter \
+          "${_arg}"
+      fi
+      if [[ "${_android_action}" == "uninstall" ]]; then
+        _android_app_filter_name_get \
+          "${_arg}"
+      fi
+    done
+    if [[ "${_android_action}" == "install" && \
+          "${_android_apps[*]}" != "" ]]; then
+      _pkg_android_app_install \
         "${_android_apps[@]}"
     fi
   elif [[ "${_os}" == "GNU/Linux" ]]; then
