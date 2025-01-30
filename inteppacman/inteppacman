@@ -237,6 +237,53 @@ _android_app_install() {
     -rf "${_tmp_dir}"
 }
 
+_android_user_install() {
+  local \
+    _app="${1}" \
+    _msg=() \
+    _cmd
+  _cmd=(
+    sudo
+      pm
+        uninstall
+          "${_app}"
+  )
+  "${_cmd[@]}"
+}
+
+_android_app_uninstall() {
+  local \
+    _apps=() \
+    _app \
+    _msg=()
+  _apps=(
+    "$@"
+  )
+  _msg=(
+    "Unininstalling Android packages"
+    "${_apps[*]}."
+  )
+  _msg_info \
+    "${_msg[*]}"
+  for _app \
+    in "${_apps[@]}"; do
+    if [[ "${_user_install}" == "n" ]]; then
+      echo \
+        "TODO: system uninstall"
+      # _android_system_uninstall \
+      #   "${_app}"
+    elif [[ "${_user_install}" == "y" ]]; then
+      _android_user_uninstall \
+        "${_app}"
+    fi
+  done
+  _msg=(
+    "Done."
+  )
+  _msg_info \
+    "${_msg[*]}"
+}
+
 _android_app_check() {
   local \
     _pkg="${1}"
@@ -409,7 +456,15 @@ _inteppacman() {
   _pacman_cmd+=(
     'pacman'
   )
+  if [[ "${_os}" == "Android" ]]; then
+    _android_corrupt || \
+      true
+  fi
   _pacman_run
+  if [[ "${_os}" == "Android" ]]; then
+    _android_naughty || \
+      true
+  fi
 }
 
 _set_overrides() {
