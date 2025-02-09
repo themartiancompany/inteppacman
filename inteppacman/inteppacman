@@ -140,7 +140,7 @@ _pacman_run() {
       "${_pacman_prefix[@]}" \
         "${_pacman_cmd[@]}" \
           "${_pacman_args[@]}" \
-          2>/dev/null || \
+          1>/dev/null || \
         true
     fi
   fi
