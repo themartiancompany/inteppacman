@@ -517,10 +517,12 @@ _pacman_args_action_get() {
   local \
     _arg \
     _args=() \
-    _action
+    _action \
+    _msg=()
   _args=(
     "$@"
   )
+  _action=""
   for _arg \
     in "${_args[@]}"; do
     if [[ "${_arg}" == "-S"* ]]; then
@@ -533,6 +535,17 @@ _pacman_args_action_get() {
       break
     fi
   done
+  if [[ "${_action}" == "" ]]; then
+    _msg=(
+      "No pacman action specified."
+      "Run 'pacman --help' or"
+      "'man pacman' to learn"
+      "how pacman works."
+    )
+    _msg_error \
+      "${_msg[*]}" \
+      1
+  fi
   echo \
     "${_action}"
 }
