@@ -116,16 +116,33 @@ _pacman_run() {
   _msg_info \
     "${_msg[*]}"
   if [[ "${_pacman_prefix[*]}" == "su -c"* ]]; then
-    su \
-      -c \
-      "${_pacman_cmd[*]} \
-        ${_pacman_args[*]}" || \
-      true
+    if [[ "${quiet}" == "n" ]]; then
+      su \
+        -c \
+        "${_pacman_cmd[*]} \
+          ${_pacman_args[*]}" || \
+        true
+    elif [[ "${quiet}" == "y" ]]; then
+      su \
+        -c \
+        "${_pacman_cmd[*]} \
+          ${_pacman_args[*]}" \
+          2>/dev/null || \
+        true
+    fi
   else
-    "${_pacman_prefix[@]}" \
-      "${_pacman_cmd[@]}" \
-        "${_pacman_args[@]}" || \
-      true
+    if [[ "${quiet}" == "n" ]]; then
+      "${_pacman_prefix[@]}" \
+        "${_pacman_cmd[@]}" \
+          "${_pacman_args[@]}" || \
+        true
+    elif [[ "${quiet}" == "y" ]]; then
+      "${_pacman_prefix[@]}" \
+        "${_pacman_cmd[@]}" \
+          "${_pacman_args[@]}" \
+          2>/dev/null || \
+        true
+    fi
   fi
 }
 
