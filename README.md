@@ -32,7 +32,7 @@ inteppacman \
   -h
 ```
 
-Inteppacman uses using the
+Inteppacman uses the
 [Crash Bash](
   https://github.com/themartiancompany/crash-bash)
 library.
