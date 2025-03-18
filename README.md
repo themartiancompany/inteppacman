@@ -19,15 +19,23 @@
 [comment]: <> (License along with this program.)
 [comment]: <> (If not, see <https://www.gnu.org/licenses/>.)
 
-# inteppacman
+# Inteppacman
 
-**inte**ger **p**rude **pacman**
-extension
+**Inte**ger **p**rude **pacman**
+extension.
+
+Inteppacman is a cross-platform pacman extension
+capable to manage Android applications.
 
 ```
 inteppacman \
   -h
 ```
+
+Inteppacman uses using the
+[Crash Bash](
+  https://github.com/themartiancompany/crash-bash)
+library.
 
 ## Name meaning
 
