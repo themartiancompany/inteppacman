@@ -22,6 +22,7 @@
 PREFIX ?= /usr/local
 DOC_DIR=$(DESTDIR)$(PREFIX)/share/doc/inteppacman
 BIN_DIR=$(DESTDIR)$(PREFIX)/bin
+MAN_DIR?=$(DESTDIR)$(PREFIX)/share/man
 
 DOC_FILES=$(wildcard *.rst)
 SCRIPT_FILES=$(wildcard inteppacman/*)
@@ -33,7 +34,7 @@ check: shellcheck
 shellcheck:
 	shellcheck -s bash $(SCRIPT_FILES)
 
-install: install-scripts install-doc
+install: install-scripts install-doc install-man
 
 install-scripts:
 
@@ -43,4 +44,14 @@ install-doc:
 
 	install -vDm 644 $(DOC_FILES) -t $(DOC_DIR)
 
-.PHONY: check install install-doc install-scripts shellcheck
+install-man:
+
+	$(_INSTALL_DIR) \
+	  "$(MAN_DIR)/man1"
+	for _file in "inteppacman"; do \
+	  rst2man \
+	    "man/$${_file}.1.rst" \
+	    "$(MAN_DIR)/man1/$${_file}.1"; \
+	done
+
+.PHONY: check install install-doc install-man install-scripts shellcheck
