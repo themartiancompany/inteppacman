@@ -108,10 +108,10 @@ _pacman_run() {
   local \
     _msg=()
   _msg=(
-    "running"
-    "${_pacman_prefix[@]}"
+    "Running"
+    "'${_pacman_prefix[@]}"
     "${_pacman_cmd[@]}"
-    "${_pacman_args[@]}"
+    "${_pacman_args[@]}'".
   )
   _msg_info \
     "${_msg[*]}"
@@ -136,8 +136,8 @@ _android_system_install() {
     install
   _install="/system/bin/install"
   _msg=(
-    "installing apk file"
-    "'${_apk}' at system level"
+    "Installing apk file"
+    "'${_apk}' at system level."
   )
   _msg_info \
     "${_msg[*]}"
@@ -161,10 +161,10 @@ _android_user_install() {
     _msg=() \
     _cmd=()
   _msg=(
-    "installing apk file"
+    "Installing apk file"
     "'${_apk}' at user level"
     "(it requires administrative"
-    "privileges regardless)"
+    "privileges regardless)."
   )
   _msg_info \
     "${_msg[*]}"
@@ -178,9 +178,9 @@ _android_user_install() {
             "/data/local/tmp/base.apk"
   )
   _msg=(
-    "moving apk file"
+    "Moving apk file"
     "'${_apk}' to"
-    "/data/local/tmp/base.apk"
+    "'/data/local/tmp/base.apk'."
   )
   _msg_info \
     "${_msg[*]}"
@@ -189,8 +189,8 @@ _android_user_install() {
     "./${_apk}" \
     "/data/local/tmp/base.apk"
   _msg=(
-    "running"
-    "'${_cmd[*]}'"
+    "Running"
+    "'${_cmd[*]}'."
   )
   _msg_info \
     "${_msg[*]}"
@@ -207,7 +207,7 @@ _android_app_install_file() {
   )
   _msg=(
     "Installing Android packages"
-    "${_apps[*]}."
+    "'${_apps[*]}'."
   )
   _msg_info \
     "${_msg[*]}"
