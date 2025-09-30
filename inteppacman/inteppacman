@@ -142,6 +142,8 @@ _pacman_run() {
           ${_pacman_args[*]}" || \
         true
     elif [[ "${quiet}" == "y" ]]; then
+      echo \
+        "Root password:"
       su \
         -c \
         "${_pacman_cmd[*]} \
@@ -305,7 +307,7 @@ _android_app_uninstall() {
   )
   _msg=(
     "Unininstalling Android packages"
-    "${_apps[*]}."
+    "'${_apps[*]}'."
   )
   _msg_info \
     "${_msg[*]}"
