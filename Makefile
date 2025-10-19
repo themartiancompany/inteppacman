@@ -24,6 +24,16 @@ DOC_DIR=$(DESTDIR)$(PREFIX)/share/doc/inteppacman
 BIN_DIR=$(DESTDIR)$(PREFIX)/bin
 MAN_DIR?=$(DESTDIR)$(PREFIX)/share/man
 
+_INSTALL_FILE=\
+  install \
+    -vDm644
+_INSTALL_DIR=\
+  install \
+    -vdm755
+_INSTALL_EXE=\
+  install \
+    -vDm755
+
 DOC_FILES=$(wildcard *.rst)
 SCRIPT_FILES=$(wildcard inteppacman/*)
 
