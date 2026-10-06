@@ -53,7 +53,27 @@ SCRIPT_FILES=\
   $(wildcard \
       $(_PROJECT)/*)
 
-all:
+all: build-man
+
+build-man:
+
+	make \
+	  prepare
+	cd \
+	  "man"; \
+	make \
+	  build-man
+
+prepare: prepare-man
+
+prepare-man:
+
+	git \
+	  submodule \
+	    update \
+	    --init \
+	      "man" || \
+	true
 
 check: shellcheck
 
@@ -104,4 +124,4 @@ uninstall-scripts:
 	  "$(BIN_DIR)/$(_PROJECT)"
 
 
-.PHONY: check install install-doc install-man install-scripts shellcheck uninstall uninstall-man uninstall-scripts
+.PHONY: check build-man install install-doc install-man install-scripts prepare prepare-man shellcheck uninstall uninstall-man uninstall-scripts
