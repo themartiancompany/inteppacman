@@ -766,7 +766,7 @@ _requirements
 # shellcheck disable=SC2034
 while \
   getopts \
-    'Aucvh?' \
+    'AuC:cvh?' \
     arg; do
   case \
     "${arg}" in
@@ -774,14 +774,15 @@ while \
       override_android_app="y" ;;
     u)
       override_user_install="y" ;;
+    C)
+      override_pacman_conf="${OPTARG}" ;;
     c)
       override_color="y" ;;
     v)
       override_quiet="n" ;;
     h|?)
       _set_overrides
-      _usage \
-        0 ;;
+      _usage \ 0 ;;
     *)
       _msg=(
         "Invalid argument '${arg}'."
