@@ -101,6 +101,8 @@ install-doc:
 
 install-man:
 
+	make \
+	  prepare-man
 	$(_INSTALL_DIR) \
 	  "$(MAN_DIR)/man1"
 	for _file in "inteppacman"; do \
