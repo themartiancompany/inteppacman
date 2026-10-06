@@ -21,22 +21,27 @@
 #    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-_bin="$( \
+_bin="$(
   dirname \
-    "$( \
-      command \
+    "$(command \
         -v \
-	  "env")")"
+	"env")")"
 _lib="${_bin}/../lib"
 _share="${_bin}/../share"
+_crash_bash="${_lib}/libcrash-bash/crash-bash"
+_sourced \
+  "${_crash_bash}" \
+  2>"/dev/null" || \
 source \
-  "${_lib}/libcrash-bash/crash-bash"
+  "${_crash_bash}"
 
 _requirements() {
   _check_cmd \
     "su"
   _check_cmd \
     "pacman"
+  _check_cmd \
+    "tar"
 }
 
 # shellcheck disable=SC2034
@@ -44,6 +49,7 @@ _global_variables() {
   operation_date=()
   user_install=""
   pacman_args=()
+  pacman_conf=""
   android_app=""
   color=""
   quiet=""
@@ -335,7 +341,7 @@ _pkg_file_android_app_check() {
     _pkg="${1}" \
     _msg=()
   _msg=(
-    "checking package archive"
+    "Checking package archive"
     "'${_pkg}' for Android"
     "applications."
   )
@@ -689,15 +695,20 @@ _set_overrides() {
     "user" \
     "install" \
     "n"
+  _set_override \
+    "pacman" \
+    "conf" \
+    ""
 }
 
 # Shows configuration options.
 _show_config() {
   _msg_info "${app_name} configuration"
-  _msg_info "           Operation date:   $(_get "operation" "date")"
-  _msg_info "      Android application:   ${android_app}"
-  _msg_info "       User-level install:   ${user_install}"
-  _msg_info "              Pacman args:   ${pacman_args[*]}"
+  _msg_info "              Operation date:   ${operation_date}"
+  _msg_info "         Android application:   ${android_app}"
+  _msg_info "          User-level install:   ${user_install}"
+  _msg_info "   Pacman configuration file:   ${pacman_conf}"
+  _msg_info "                 Pacman args:   ${pacman_args[*]}"
 }
 
 
@@ -725,11 +736,21 @@ Usage:
      -A                   Explicitly specify it's an
                           Android app.
                           Default: ${android_app}
+
+     -u                   User-level installation.
+                          Default: ${user_install}
+
+     -C                   Override pacman configuration
+                          file.
+                          Default: ${pacman_conf}
+
      -u                   User-level installation.
                           Default: ${user_install}
 
      -h                   This message.
+
      -v                   Enable verbose output
+
 ENDUSAGETEXT
   _printf \
     '%s\n' \
@@ -749,25 +770,32 @@ while \
     arg; do
   case \
     "${arg}" in
-    A) override_android_app="y" ;;
-    u) override_user_install="y" ;;
-    c) override_color="y" ;;
-    v) override_quiet="n" ;;
-    h|?) _set_overrides && \
-	 _usage \
-           0 ;;
+    A)
+      override_android_app="y" ;;
+    u)
+      override_user_install="y" ;;
+    c)
+      override_color="y" ;;
+    v)
+      override_quiet="n" ;;
+    h|?)
+      _set_overrides
+      _usage \
+        0 ;;
     *)
-    _msg_error \
-      "Invalid argument '${arg}'" \
-      0 && \
-    _set_overrides && \
-    _usage \
-      1
-    ;;
+      _msg=(
+        "Invalid argument '${arg}'."
+      )
+      _msg_error \
+        "${_msg[*]}" \
+        0
+      _set_overrides
+      _usage \
+        1 ;;
   esac
 done
 shift \
-  $(( \
+  $((
     OPTIND - 1 \
   ))
 pacman_args=(
@@ -777,6 +805,7 @@ _set_overrides
 app_opts=(
   "${android_app}"
   "${user_install}"
+  "${pacman_conf}"
   "${pacman_args[@]}"
 )
 _config_user_init \
